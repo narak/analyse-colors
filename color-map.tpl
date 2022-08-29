@@ -69,12 +69,15 @@
         margin-bottom: 5px;
         margin-left: -80px;
         padding: 7px;
-        background: rgba(255, 255, 255, 0.95);
         color: #000;
         content: attr(data-tooltip);
         text-align: left;
         font-size: 14px;
         z-index: 2;
+        overflow: visible;
+        background: #f1f1f1;
+        border-radius: 3px;
+        width: 400px;
     }
 
     /* Show tooltip content on hover */

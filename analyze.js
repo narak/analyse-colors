@@ -7,7 +7,6 @@ const argv = require('minimist')(process.argv.slice(2));
 const Color = require('color');
 
 // TEMPLATES
-const tplClrLine = `@value {{key}}: {{value}};`;
 const tplClrContainer = `
     <div class="grid-container">
         {{colorBlocks}}
@@ -24,18 +23,26 @@ const tplClrHTML = fs.readFileSync(`${__dirname}/color-map.tpl`, 'utf8');
 
 const promises = [];
 const extensions = {
-    // jsx: true,
-    // js: true,
+    jsx: true,
+    js: true,
+    ts: true,
+    tsx: true,
     less: true,
     cssm: true,
 };
 
+const rootDirectory = argv.r || argv.root || '';
 const directory = argv.d || argv.directory;
-const dirArray = directory.split(/,|\s/).filter(d => d);
+const dirArray = directory
+    .split(/,|\s/)
+    .map(d => d ? path.join(rootDirectory, d) : false)
+    .filter(Boolean);
 
 if (!directory) {
     console.error('no directory supplied. use -d');
 }
+
+console.log("Analyzing directories:", dirArray);
 
 const DISTANCE_THRESHOLD = 7;
 const colorDifference = ([h1, s1, l1], [h2, s2, l2]) => {
@@ -130,6 +137,7 @@ Promise.all(promises).then(() => {
     console.log(`Found ${colorCount} unique colors.`);
 
     const colorMapJSON = `${__dirname}/color-map.json`;
+    const colorMapJS = `${__dirname}/color-map.js`;
     const colorMapHTML = `${__dirname}/color-map.html`;
 
     // The object that is written to the file for config read/writes.
@@ -143,6 +151,7 @@ Promise.all(promises).then(() => {
         const name = 'color' + idx;
         colorStats[name] = {
             hsl: val,
+            value: color.color,
             strings: Array.from(color.strings),
             files: Array.from(color.files),
         };
@@ -187,7 +196,7 @@ Promise.all(promises).then(() => {
                         name,
                         value: clr,
                         count: colorStats[name].files.length,
-                        tooltip: colorStats[name].files.join(', '),
+                        tooltip: colorStats[name].files.map(file => file.replace(rootDirectory, '')).join(', '),
                         title: clr,
                     });
                 })
@@ -197,6 +206,7 @@ Promise.all(promises).then(() => {
 
     console.log('Writing color map JSON:', colorMapJSON);
     fs.writeFileSync(colorMapJSON, JSON.stringify(colorStats, null, 4), 'utf8');
+    fs.writeFileSync(colorMapJS, `var ColorsJSON = ${JSON.stringify(colorStats, null, 4)};`, 'utf8');
 
     console.log('Writing color map HTML:', colorMapHTML);
     fs.writeFileSync(
