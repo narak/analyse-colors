@@ -53,16 +53,9 @@
         cursor: pointer;
     }
 
-    /* Hide the tooltip content by default */
-    [data-tooltip]:before,
-    [data-tooltip]:after {
-        visibility: hidden;
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    /* Position tooltip above the element */
-    [data-tooltip]:before {
+    /* Show tooltip content on hover */
+    [data-tooltip]:hover:before,
+    [data-tooltip]:hover:after {
         position: absolute;
         top: 83px;
         left: 50%;
@@ -78,13 +71,6 @@
         background: #f1f1f1;
         border-radius: 3px;
         width: 400px;
-    }
-
-    /* Show tooltip content on hover */
-    [data-tooltip]:hover:before,
-    [data-tooltip]:hover:after {
-        visibility: visible;
-        opacity: 1;
     }
 </style>
 
@@ -175,37 +161,49 @@ function draw(distance) {
 
     each(ColorsJSON, (val, key) => {
         if (!seen[key]) {
-            const block = [key];
+            const block = {
+                key,
+                colors: [key],
+            };
             seen[key] = true;
             each(distances[key], (val2, key2) => {
                 seen[key2] = true;
-                block.push(key2);
+                block.colors.push(key2);
             });
             blocks.push(block);
         }
     });
-    const colorBlocksHtml = blocks.map((block, i) => {
-        block.sort((a, b) => {
-            return ColorsJSON[a].files.length <
-                ColorsJSON[b].files.length
-                ? 1
-                : -1;
-        });
-        return tpl(tplClrContainer, {
-            colorBlocks: block
-                .map(name => {
-                    const color = ColorsJSON[name];
-                    return tpl(tplClrBlock, {
-                        name,
-                        value: color.hsl,
-                        count: color.files.length,
-                        tooltip: color.files.join(', '),
-                        title: color.hsl,
-                    });
-                })
-                .join(''),
-        });
-    }).join('');
+    const colorBlocksHtml = blocks
+        .sort((a, b) => {
+                return ColorsJSON[a.key].value[0] >
+                    ColorsJSON[b.key].value[0]
+                    ? 1
+                    : -1;
+            })
+        .map((block, i) => {
+            block.colors.sort((a, b) => {
+                return ColorsJSON[a].files.length <
+                    ColorsJSON[b].files.length
+                    ? 1
+                    : -1;
+            });
+            return tpl(tplClrContainer, {
+                colorBlocks: block
+                    .colors
+                    .map(name => {
+                        const color = ColorsJSON[name];
+                        return tpl(tplClrBlock, {
+                            name,
+                            value: color.hsl,
+                            count: color.files.length,
+                            tooltip: color.files.join(', '),
+                            title: color.hsl,
+                        });
+                    })
+                    .join(''),
+            });
+        }
+    ).join('');
     console.log('Blocks', blocks);
     $colors.innerHTML = colorBlocksHtml;
     $clusterCount.innerHTML = blocks.length;
