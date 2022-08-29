@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "color": "^4.2.3",
+    "glob": "^8.0.3",
+    "lodash": "^4.17.21",
+    "minimist": "^1.2.6"
+  }
+}
