@@ -14,17 +14,21 @@
     }
 
     .grid-container {
-          display: grid;
-          grid-template-columns: repeat(10, 1fr);
-          column-gap: 20px;
-          row-gap: 20px;
-          margin: 1rem 0;
-          border: 1px solid #b3b3b3;
-          padding: 1.6rem 0;
-          border-radius: 3px;
+        display: inline-block;
+        grid-template-columns: repeat(10, 1fr);
+        column-gap: 20px;
+        row-gap: 20px;
+        margin: 1rem 0;
+        border: 1px solid #b3b3b3;
+        padding: 1.6rem 0;
+        border-radius: 3px;
+        vertical-align: middle;
+        margin: 1rem;
     }
 
-    .grid-container>div {
+    .color-blocks {
+        display: flex;
+        flex-wrap: wrap;
         text-align: center;
         position: relative;
     }
@@ -34,6 +38,7 @@
         margin: auto;
         width: 60px;
         height: 60px;
+        margin: 1rem;
     }
 
     .grid-color-count {
@@ -46,8 +51,8 @@
         width: 20px;
 
         position: absolute;
-        top: -7px;
-        right: 20px;
+        top: 7px;
+        right: 7px;
     }
 
     /* Add this attribute to the element that needs a tooltip */
@@ -80,14 +85,16 @@
 <body>
     <h2>Colors: <span id="colorCount">{{colorCount}}</span> | Clusters: <span id="clusterCount">{{clusterCount}}</span></h2>
     <div><input type="text" name="clusterDistanceThreshold" id="clusterDistanceThreshold" value="7" /></div>
-    <span id="colors">{{colors}}</span>
+    <div id="colors">{{colors}}</div>
     <script src="./color-map.js"></script>
     <script>
 
 // TEMPLATES
 const tplClrContainer = `
     <div class="grid-container">
-        {{colorBlocks}}
+        <div class="color-blocks">
+            {{colorBlocks}}
+        </div>
     </div>
 `;
 const tplClrBlock = `
