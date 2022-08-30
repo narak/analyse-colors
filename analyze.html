@@ -128,15 +128,26 @@ const tpl = (string, values = {}) => {
     return replacedStr;
 };
 
-const colorDifference = ([h1, s1, l1, a1], [h2, s2, l2, a2]) => {
-    let sumOfSquares = 0;
+function RGBAtoRGB(r, g, b, a, r2, g2, b2) {
 
-    sumOfSquares += Math.pow(h1 - h2, 2);
-    sumOfSquares += Math.pow(s1 - s2, 2);
-    sumOfSquares += Math.pow(l1 - l2, 2);
+    const r3 = Math.round(((1 - a) * r2) + (a * r))
+    const g3 = Math.round(((1 - a) * g2) + (a * g))
+    const b3 = Math.round(((1 - a) * b2) + (a * b))
+    return [r3, g3, b3];
+}
+
+const colorDifference = (color1, color2) => {
+
+    const [a1, b1, c1/*, d1*/] = RGBAtoRGB(...color1, 255, 255, 255);
+    const [a2, b2, c2/*, d2*/] = RGBAtoRGB(...color2, 255, 255, 255);
+
+    let sumOfSquares = 0;
+    sumOfSquares += Math.pow(a1 - a2, 2);
+    sumOfSquares += Math.pow(b1 - b2, 2);
+    sumOfSquares += Math.pow(c1 - c2, 2);
     // The value of alpha ranges from 0 to 1, as a result it adds no weight to the distance.
     // So, multiplying it by 100(since 0 to 1 denotes percentage), adds more weight.
-    sumOfSquares += Math.pow(a1*100 - a2*100, 2);
+    // sumOfSquares += Math.pow(d1*100 - d2*100, 2);
 
     return Math.sqrt(sumOfSquares);
 };
@@ -159,7 +170,7 @@ function draw(distance) {
 
     each(ColorsJSON, (val, key, idx) => {
         distances[key] = {};
-        colorNameMap[val.hsl] = key;
+        colorNameMap[val.name] = key;
         each(ColorsJSON, (_val, _key) => {
             if (_val === val) return;
             const dist = colorDifference([...val.value, val.alpha], [..._val.value, _val.alpha]);
@@ -185,17 +196,17 @@ function draw(distance) {
                 seen[key2] = true;
                 block.colors.push(key2);
             });
-            if (ColorsJSON[key].alpha <= 0.15) {
-                console.log(key, ColorsJSON[key]);
-                whiteBlocks.push(block);
-            } else if (ColorsJSON[key].value[1] <= 10) {
-                grayBlocks.push(block);
-            } else {
-                colorBlocks.push(block);
-            }
+            // if (ColorsJSON[key].alpha <= 0.15) {
+            //     console.log(key, ColorsJSON[key]);
+            //     whiteBlocks.push(block);
+            // } else if (ColorsJSON[key].value[1] <= 10) {
+            //     grayBlocks.push(block);
+            // } else {
+            colorBlocks.push(block);
+            // }
         }
     });
-    const allBlocks = [whiteBlocks, grayBlocks, colorBlocks];
+    const allBlocks = [/*whiteBlocks, grayBlocks, */colorBlocks];
     const colorBlocksHtml = allBlocks.map(blocks => blocks
         .sort((a, b) => {
                 return ColorsJSON[a.key].value[0] >
@@ -217,10 +228,10 @@ function draw(distance) {
                         const color = ColorsJSON[name];
                         return tpl(tplClrBlock, {
                             name,
-                            value: color.hsl,
+                            value: color.name,
                             count: color.files.length,
                             tooltip: color.files.join(', '),
-                            title: `${color.hsl} - alpha(${color.alpha})`,
+                            title: `${color.name} - alpha(${color.alpha})`,
                         });
                     })
                     .join(''),

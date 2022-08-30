@@ -33,7 +33,7 @@ const uniqColors = {};
 const setColors = (colors, file) => {
     if (colors) {
         colors.forEach(color => {
-            const clr = Color(color).hsl();
+            const clr = Color(color).rgb();
             const str = clr.toString();
             if (!uniqColors[str]) {
                 uniqColors[str] = {
@@ -112,7 +112,7 @@ Promise.all(promises).then(() => {
     each(uniqColors, (val, color, idx) => {
         const name = 'color' + idx;
         colorStats[name] = {
-            hsl: val,
+            name: val,
             value: color.color,
             alpha: color.alpha,
             luminosity: color.luminosity,
