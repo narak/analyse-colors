@@ -93,7 +93,7 @@ const tplClrContainer = `
 const tplClrBlock = `
         <div title="{{title}}" data-tooltip="{{tooltip}}">
             <div style="background-color: {{value}}" class="grid-color-display"></div><br />
-            {{name}} <span class="grid-color-count">{{count}}</span>
+            {{name}}<span class="grid-color-count">{{count}}</span>
         </div>
 `;
 
@@ -121,12 +121,15 @@ const tpl = (string, values = {}) => {
     return replacedStr;
 };
 
-const colorDifference = ([h1, s1, l1], [h2, s2, l2]) => {
-    var sumOfSquares = 0;
+const colorDifference = ([h1, s1, l1, a1], [h2, s2, l2, a2]) => {
+    let sumOfSquares = 0;
 
     sumOfSquares += Math.pow(h1 - h2, 2);
     sumOfSquares += Math.pow(s1 - s2, 2);
     sumOfSquares += Math.pow(l1 - l2, 2);
+    // The value of alpha ranges from 0 to 1, as a result it adds no weight to the distance.
+    // So, multiplying it by 100(since 0 to 1 denotes percentage), adds more weight.
+    sumOfSquares += Math.pow(a1*100 - a2*100, 2);
 
     return Math.sqrt(sumOfSquares);
 };
@@ -152,7 +155,7 @@ function draw(distance) {
         colorNameMap[val.hsl] = key;
         each(ColorsJSON, (_val, _key) => {
             if (_val === val) return;
-            const dist = colorDifference(val.value, _val.value);
+            const dist = colorDifference([...val.value, val.alpha], [..._val.value, _val.alpha]);
             if (dist <= distance) {
                 distances[key][_key] = dist;
             }
@@ -160,6 +163,7 @@ function draw(distance) {
     });
 
     const seen = {};
+    const whiteBlocks = [];
     const grayBlocks = [];
     const colorBlocks = [];
 
@@ -174,14 +178,18 @@ function draw(distance) {
                 seen[key2] = true;
                 block.colors.push(key2);
             });
-            if (ColorsJSON[key].value[1] <= 10) {
+            if (ColorsJSON[key].alpha <= 0.15) {
+                console.log(key, ColorsJSON[key]);
+                whiteBlocks.push(block);
+            } else if (ColorsJSON[key].value[1] <= 10) {
                 grayBlocks.push(block);
             } else {
                 colorBlocks.push(block);
             }
         }
     });
-    const colorBlocksHtml = [grayBlocks, colorBlocks].map(blocks => blocks
+    const allBlocks = [whiteBlocks, grayBlocks, colorBlocks];
+    const colorBlocksHtml = allBlocks.map(blocks => blocks
         .sort((a, b) => {
                 return ColorsJSON[a.key].value[0] >
                     ColorsJSON[b.key].value[0]
@@ -205,17 +213,15 @@ function draw(distance) {
                             value: color.hsl,
                             count: color.files.length,
                             tooltip: color.files.join(', '),
-                            title: color.hsl,
+                            title: `${color.hsl} - alpha(${color.alpha})`,
                         });
                     })
                     .join(''),
             });
         }
-    ).join('')).join('');
-    console.log('Gray Blocks', grayBlocks);
-    console.log('Colors Blocks', colorBlocks);
+    ).join('')).join('<hr />');
     $colors.innerHTML = colorBlocksHtml;
-    $clusterCount.innerHTML = grayBlocks.length + colorBlocks.length;
+    $clusterCount.innerHTML = allBlocks.reduce((acc, b) => acc + b.length, 9);
 }
     </script>
 </body>
