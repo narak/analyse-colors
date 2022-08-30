@@ -35,10 +35,19 @@
 
     .grid-color-display {
         display: inline-block;
-        margin: auto;
         width: 60px;
         height: 60px;
         margin: 1rem;
+        border-radius: 4px;
+    }
+
+    .grid-meta-color-display {
+        display: inline-block;
+        width: 56px;
+        height: 56px;
+        margin: 1rem;
+        box-shadow: 2px 2px 8px #bfbebe;
+        border: 2px solid #fff;
     }
 
     .grid-color-count {
@@ -98,10 +107,16 @@ const tplClrContainer = `
     </div>
 `;
 const tplClrBlock = `
-        <div title="{{title}}" data-tooltip="{{tooltip}}">
-            <div style="background-color: {{value}}" class="grid-color-display"></div><br />
-            {{name}}<span class="grid-color-count">{{count}}</span>
-        </div>
+    <div title="{{title}}" data-tooltip="{{tooltip}}">
+        <div style="background-color: {{value}}" class="grid-color-display"></div><br />
+        {{name}}<span class="grid-color-count">{{count}}</span>
+    </div>
+`;
+const tplClrMetaBlock = `
+    <div title="{{title}}">
+        <div style="background-color: {{value}}" class="grid-meta-color-display"></div><br />
+        <b>{{name}}</b>
+    </div>
 `;
 
 // SELECTORS
@@ -129,7 +144,6 @@ const tpl = (string, values = {}) => {
 };
 
 function RGBAtoRGB(r, g, b, a, r2, g2, b2) {
-
     const r3 = Math.round(((1 - a) * r2) + (a * r))
     const g3 = Math.round(((1 - a) * g2) + (a * g))
     const b3 = Math.round(((1 - a) * b2) + (a * b))
@@ -137,17 +151,13 @@ function RGBAtoRGB(r, g, b, a, r2, g2, b2) {
 }
 
 const colorDifference = (color1, color2) => {
-
-    const [a1, b1, c1/*, d1*/] = RGBAtoRGB(...color1, 255, 255, 255);
-    const [a2, b2, c2/*, d2*/] = RGBAtoRGB(...color2, 255, 255, 255);
+    const [a1, b1, c1] = color1;
+    const [a2, b2, c2] = color2;
 
     let sumOfSquares = 0;
     sumOfSquares += Math.pow(a1 - a2, 2);
     sumOfSquares += Math.pow(b1 - b2, 2);
     sumOfSquares += Math.pow(c1 - c2, 2);
-    // The value of alpha ranges from 0 to 1, as a result it adds no weight to the distance.
-    // So, multiplying it by 100(since 0 to 1 denotes percentage), adds more weight.
-    // sumOfSquares += Math.pow(d1*100 - d2*100, 2);
 
     return Math.sqrt(sumOfSquares);
 };
@@ -173,7 +183,7 @@ function draw(distance) {
         colorNameMap[val.name] = key;
         each(ColorsJSON, (_val, _key) => {
             if (_val === val) return;
-            const dist = colorDifference([...val.value, val.alpha], [..._val.value, _val.alpha]);
+            const dist = colorDifference(val.rgbaToRgb, _val.rgbaToRgb);
             if (dist <= distance) {
                 distances[key][_key] = dist;
             }
@@ -181,8 +191,6 @@ function draw(distance) {
     });
 
     const seen = {};
-    const whiteBlocks = [];
-    const grayBlocks = [];
     const colorBlocks = [];
 
     each(ColorsJSON, (val, key) => {
@@ -192,32 +200,48 @@ function draw(distance) {
                 colors: [key],
             };
             seen[key] = true;
+
+            let avgs = ColorsJSON[key].rgbaToRgb;
             each(distances[key], (val2, key2) => {
                 seen[key2] = true;
                 block.colors.push(key2);
+
+                const vals = ColorsJSON[key].rgbaToRgb;
+                avgs = avgs.map((x, i) => (x + vals[i]) / 2);
             });
-            // if (ColorsJSON[key].alpha <= 0.15) {
-            //     console.log(key, ColorsJSON[key]);
-            //     whiteBlocks.push(block);
-            // } else if (ColorsJSON[key].value[1] <= 10) {
-            //     grayBlocks.push(block);
-            // } else {
+
+            if (block.colors.length > 1) {
+                const blockAvgName = `${key}-Average`;
+                ColorsJSON[blockAvgName] = {
+                    meta: true,
+                    title: "Average",
+                    value: avgs,
+                    name: `rgb(${avgs[0]}, ${avgs[1]}, ${avgs[2]})`,
+                };
+                block.colors.push(blockAvgName);
+            }
+
             colorBlocks.push(block);
-            // }
         }
     });
     const allBlocks = [/*whiteBlocks, grayBlocks, */colorBlocks];
     const colorBlocksHtml = allBlocks.map(blocks => blocks
-        .sort((a, b) => {
-                return ColorsJSON[a.key].value[0] >
-                    ColorsJSON[b.key].value[0]
-                    ? 1
-                    : -1;
-            })
+        // .sort((a, b) => {
+        //         return ColorsJSON[a.key].luminosity >
+        //             ColorsJSON[b.key].luminosity
+        //             ? 1
+        //             : -1;
+        //     })
+        // .sort((a, b) => {
+        //         return a.colors.length >
+        //             b.colors.length
+        //             ? 1
+        //             : -1;
+        //     })
         .map((block, i) => {
             block.colors.sort((a, b) => {
-                return ColorsJSON[a].files.length <
-                    ColorsJSON[b].files.length
+                return ColorsJSON[a].files?.length <
+                    ColorsJSON[b].files?.length
                     ? 1
                     : -1;
             });
@@ -226,13 +250,22 @@ function draw(distance) {
                     .colors
                     .map(name => {
                         const color = ColorsJSON[name];
-                        return tpl(tplClrBlock, {
-                            name,
-                            value: color.name,
-                            count: color.files.length,
-                            tooltip: color.files.join(', '),
-                            title: `${color.name} - alpha(${color.alpha})`,
-                        });
+                        if (!color.meta) {
+                            return tpl(tplClrBlock, {
+                                name,
+                                value: color.name,
+                                count: color.files.length,
+                                tooltip: color.files.join(', '),
+                                title: `${color.name} - alpha(${color.alpha})`,
+                            });
+                        } else {
+                            return tpl(tplClrMetaBlock, {
+                                name: color.title,
+                                value: color.name,
+                                tooltip: '',
+                                title: '',
+                            });
+                        }
                     })
                     .join(''),
             });

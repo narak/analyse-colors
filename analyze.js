@@ -99,6 +99,13 @@ dirArray.forEach(dir => {
     );
 });
 
+function RGBAtoRGB(r, g, b, a, r2, g2, b2) {
+    const r3 = Math.round(((1 - a) * r2) + (a * r))
+    const g3 = Math.round(((1 - a) * g2) + (a * g))
+    const b3 = Math.round(((1 - a) * b2) + (a * b))
+    return [r3, g3, b3];
+}
+
 Promise.all(promises).then(() => {
     const colorCount = Object.keys(uniqColors).length;
     console.log(`Found ${colorCount} unique colors.`);
@@ -114,6 +121,7 @@ Promise.all(promises).then(() => {
         colorStats[name] = {
             name: val,
             value: color.color,
+            rgbaToRgb: RGBAtoRGB(...color.color, color.alpha, 255, 255, 255),
             alpha: color.alpha,
             luminosity: color.luminosity,
             strings: Array.from(color.strings),

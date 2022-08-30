@@ -60,4 +60,4 @@ each(themeJSON, (key, val) => {
 });
 const colorThemeFile = `${__dirname}/color-theme.js`;
 console.log('Writing color theme JSON:', colorThemeFile);
-fs.writeFileSync(colorThemeFile, `var ColorsJSON = ${JSON.stringify(colorStats, null, 4)};`, 'utf8');
+fs.writeFileSync(colorThemeFile, `var ThemeJSON = ${JSON.stringify(colorStats, null, 4)};`, 'utf8');
