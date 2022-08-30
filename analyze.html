@@ -49,6 +49,9 @@
         margin: 1rem;
         box-shadow: 2px 2px 8px #bfbebe;
         border: 2px solid #fff;
+        line-height: 56px;
+        font-size: 0.8rem;
+        font-weight: bold;
     }
 
     .grid-color-count {
@@ -117,7 +120,7 @@ const tplClrBlock = `
 `;
 const tplClrMetaBlock = `
     <div title="{{title}}">
-        <div style="background-color: {{value}}" class="grid-meta-color-display"></div><br />
+        <div style="background-color: {{value}}" class="grid-meta-color-display">{{innerValue}}</div><br />
         <b>{{name}}</b>
     </div>
 `;
@@ -166,6 +169,7 @@ const colorDifference = (color1, color2) => {
 };
 
 // INIT
+let distances;
 const DISTANCE_THRESHOLD = +$threshold.value;
 $threshold.addEventListener('change', e => {
     console.log(e.target.value);
@@ -182,7 +186,7 @@ if (typeof ThemeJSON !== 'undefined') {
 
 function draw(distance) {
     // An object that stores the distance between all colors within the distance threshold.
-    const distances = {};
+    distances = {};
     const colorNameMap = {};
 
     each(ColorsJSON, (val, key, idx) => {
@@ -225,13 +229,17 @@ function draw(distance) {
                 });
             }
 
+            let dkey = 'theme' + key;
+            distances[dkey] = {};
             if (typeof ThemeJSON !== 'undefined') {
                 let closestName;
                 let closestDistance;
                 each(ThemeJSON, (value, key) => {
                     const themeColor = ThemeJSON[key];
                     const dist = colorDifference(avgs, themeColor.value);
-                    if (!closestDistance || dist < closestDistance) {
+                    distances[dkey][key] = dist;
+
+                    if (closestDistance === undefined || dist < closestDistance) {
                         closestName = key;
                         closestDistance = dist;
                     }
@@ -239,7 +247,8 @@ function draw(distance) {
                 const themeColor = ThemeJSON[closestName];
                 block.meta.push({
                     name: closestName,
-                    title: 'Theme',
+                    title: key,
+                    innerValue: closestDistance.toFixed(2),
                     value: `rgb(${themeColor.value[0]}, ${themeColor.value[1]}, ${themeColor.value[2]})`,
                 });
             }
@@ -288,6 +297,7 @@ function draw(distance) {
                         return tpl(tplClrMetaBlock, {
                             name: val.name,
                             value: val.value,
+                            innerValue: val.innerValue || '',
                             title: val.title || '',
                         });
                     })
