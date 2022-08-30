@@ -96,6 +96,7 @@
     <div><input type="text" name="clusterDistanceThreshold" id="clusterDistanceThreshold" value="7" /></div>
     <div id="colors">{{colors}}</div>
     <script src="./color-map.js"></script>
+    <script src="./color-theme.js"></script>
     <script>
 
 // TEMPLATES
@@ -103,6 +104,7 @@ const tplClrContainer = `
     <div class="grid-container">
         <div class="color-blocks">
             {{colorBlocks}}
+            {{metaBlocks}}
         </div>
     </div>
 `;
@@ -173,6 +175,10 @@ draw(DISTANCE_THRESHOLD);
 // BODY
 $colorCount.innerHTML = Object.keys(ColorsJSON).length;
 
+if (typeof ThemeJSON !== 'undefined') {
+    console.log('Found theme file!');
+}
+
 function draw(distance) {
     // An object that stores the distance between all colors within the distance threshold.
     const distances = {};
@@ -198,6 +204,7 @@ function draw(distance) {
             const block = {
                 key,
                 colors: [key],
+                meta: [],
             };
             seen[key] = true;
 
@@ -211,14 +218,30 @@ function draw(distance) {
             });
 
             if (block.colors.length > 1) {
-                const blockAvgName = `${key}-Average`;
-                ColorsJSON[blockAvgName] = {
+                block.meta.push({
                     meta: true,
                     title: "Average",
-                    value: avgs,
                     name: `rgb(${avgs[0]}, ${avgs[1]}, ${avgs[2]})`,
-                };
-                block.colors.push(blockAvgName);
+                });
+            }
+
+            if (typeof ThemeJSON !== 'undefined') {
+                let closestName;
+                let closestDistance;
+                each(ThemeJSON, (value, key) => {
+                    const themeColor = ThemeJSON[key];
+                    const dist = colorDifference(avgs, themeColor.value);
+                    if (!closestDistance || dist < closestDistance) {
+                        closestName = key;
+                        closestDistance = dist;
+                    }
+                });
+                const themeColor = ThemeJSON[closestName];
+                block.meta.push({
+                    meta: true,
+                    title: "Theme: " + closestName,
+                    name: `rgb(${themeColor.value[0]}, ${themeColor.value[1]}, ${themeColor.value[2]})`,
+                });
             }
 
             colorBlocks.push(block);
@@ -250,22 +273,22 @@ function draw(distance) {
                     .colors
                     .map(name => {
                         const color = ColorsJSON[name];
-                        if (!color.meta) {
-                            return tpl(tplClrBlock, {
-                                name,
-                                value: color.name,
-                                count: color.files.length,
-                                tooltip: color.files.join(', '),
-                                title: `${color.name} - alpha(${color.alpha})`,
-                            });
-                        } else {
-                            return tpl(tplClrMetaBlock, {
-                                name: color.title,
-                                value: color.name,
-                                tooltip: '',
-                                title: '',
-                            });
-                        }
+                        return tpl(tplClrBlock, {
+                            name,
+                            value: color.name,
+                            count: color.files.length,
+                            tooltip: color.files.join(', '),
+                            title: `${color.name} - alpha(${color.alpha})`,
+                        });
+                    })
+                    .join(''),
+                metaBlocks: block
+                    .meta
+                    .map(val => {
+                        return tpl(tplClrMetaBlock, {
+                            name: val.title,
+                            value: val.name,
+                        });
                     })
                     .join(''),
             });
